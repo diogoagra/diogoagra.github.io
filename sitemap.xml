@@ -2,9 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://diogoagra.dev/categories/</loc>
-  </url><url>
     <loc>https://diogoagra.dev/</loc>
+    <lastmod>2023-08-09T21:54:32-03:00</lastmod>
+  </url><url>
+    <loc>https://diogoagra.dev/posts/hello-world/</loc>
+    <lastmod>2023-08-09T21:54:32-03:00</lastmod>
+  </url><url>
+    <loc>https://diogoagra.dev/posts/</loc>
+    <lastmod>2023-08-09T21:54:32-03:00</lastmod>
+  </url><url>
+    <loc>https://diogoagra.dev/categories/</loc>
   </url><url>
     <loc>https://diogoagra.dev/tags/</loc>
   </url>
