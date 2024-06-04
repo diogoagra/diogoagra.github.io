@@ -1,26 +1,19 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>diogoagra.dev</title>
-    <link>https://diogoagra.dev/</link>
-    <description>Recent content on diogoagra.dev</description>
+    <title>Privacidade on diogoagra.dev</title>
+    <link>https://diogoagra.dev/tags/privacidade/</link>
+    <description>Recent content in Privacidade on diogoagra.dev</description>
     <generator>Hugo</generator>
     <language>en</language>
     <lastBuildDate>Tue, 04 Jun 2024 20:43:29 -0300</lastBuildDate>
-    <atom:link href="https://diogoagra.dev/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://diogoagra.dev/tags/privacidade/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Política de Privacidade</title>
       <link>https://diogoagra.dev/posts/privacy-policy/</link>
       <pubDate>Tue, 04 Jun 2024 20:43:29 -0300</pubDate>
       <guid>https://diogoagra.dev/posts/privacy-policy/</guid>
       <description>Política de Privacidade 1. Introdução Este aplicativo (&amp;ldquo;Tracking&amp;rdquo;) é fornecido por Diogo Agra (&amp;ldquo;Desenvolvedor&amp;rdquo;). Esta Política de Privacidade (&amp;ldquo;Política&amp;rdquo;) descreve como o Desenvolvedor coleta e usa as informações do usuário em conexão com o uso do Aplicativo.&#xA;2. Coleta de Informações O Aplicativo não coleta nenhuma informação pessoal ou confidencial do usuário. O Aplicativo não rastreia ou monitora a atividade do usuário no Aplicativo ou em outros sites ou serviços. O Aplicativo não armazena nenhum dado do usuário em seus servidores.</description>
-    </item>
-    <item>
-      <title>Hello World!</title>
-      <link>https://diogoagra.dev/posts/hello-world/</link>
-      <pubDate>Wed, 09 Aug 2023 21:54:32 -0300</pubDate>
-      <guid>https://diogoagra.dev/posts/hello-world/</guid>
-      <description>Hello world!</description>
     </item>
   </channel>
 </rss>
