@@ -182,8 +182,21 @@
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Default wrapping for all cells */
+        #full-log-table th, 
+        #full-log-table td {
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        /* No wrapping for specific columns in the full log table */
+        #full-log-table th:nth-child(-n+4),
+        #full-log-table td:nth-child(-n+4) {
             white-space: nowrap;
         }
+
 
         th {
             background-color: var(--bg-color);
@@ -274,6 +287,17 @@
             color: white;
             text-decoration: none;
             cursor: pointer;
+        }
+
+        .delete-btn {
+            cursor: pointer;
+            color: var(--enemy-color);
+            font-size: 1.2em;
+            text-align: center;
+            padding: 0 5px;
+        }
+        .delete-btn:hover {
+            opacity: 0.7;
         }
 
         /* --- Media Queries for Responsiveness --- */
@@ -444,6 +468,7 @@
                     <table id="full-log-table">
                         <thead>
                             <tr>
+                                <th>Ação</th>
                                 <th data-sort="timestamp">Data</th>
                                 <th data-sort="victim">Vítima</th>
                                 <th data-sort="level">Level</th>
@@ -458,7 +483,6 @@
     </div>
 
 <script>
-// SCRIPT ORIGINAL DO USUÁRIO RESTAURADO
 document.addEventListener('DOMContentLoaded', () => {
     const analyzeBtn = document.getElementById('analyze-btn');
     const logInput = document.getElementById('log-input');
@@ -472,6 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let charts = {};
     let playerTeamMap = {};
+    let fullLogData = []; // Store the master list of events
 
     closeBtn.onclick = () => modal.style.display = "none";
     window.onclick = (event) => {
@@ -482,7 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showModal(message) {
         modalText.textContent = message;
-        modal.style.display = "flex"; // Ajuste para centralizar o modal
+        modal.style.display = "flex";
     }
 
     analyzeBtn.addEventListener('click', () => {
@@ -492,28 +517,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        Object.values(charts).forEach(chart => {
-            if (chart) chart.destroy();
-        });
-        charts = {};
-
-        const parsedData = parseLogData(rawLog);
-        if (parsedData.length === 0) {
+        fullLogData = parseLogData(rawLog);
+        if (fullLogData.length === 0) {
             showModal("Nenhum dado de morte válido foi encontrado. Verifique o formato do texto. O log deve começar com [AMIGO] ou [INIMIGO].");
             return;
         }
-
-        buildPlayerTeamMap(parsedData);
-
-        dashboardPlaceholder.style.display = 'none';
-        dashboardContent.style.display = 'flex'; // Única alteração: display 'flex' para corresponder ao novo CSS
         
-        try {
-            updateDashboard(parsedData);
-        } catch (e) {
-            console.error("Erro ao atualizar o dashboard:", e);
-            showModal("Ocorreu um erro inesperado. Verifique o console do navegador para detalhes técnicos.");
-        }
+        recalculateDashboard();
     });
     
     searchInput.addEventListener('keyup', () => {
@@ -531,6 +541,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    function recalculateDashboard() {
+        if (fullLogData.length === 0) {
+            dashboardPlaceholder.style.display = 'block';
+            dashboardContent.style.display = 'none';
+            return;
+        }
+
+        dashboardPlaceholder.style.display = 'none';
+        dashboardContent.style.display = 'flex';
+        
+        Object.values(charts).forEach(chart => {
+            if (chart) chart.destroy();
+        });
+        charts = {};
+        
+        try {
+            buildPlayerTeamMap(fullLogData);
+            updateDashboard(fullLogData);
+        } catch (e) {
+            console.error("Erro ao atualizar o dashboard:", e);
+            showModal("Ocorreu um erro inesperado. Verifique o console do navegador para detalhes técnicos.");
+        }
+    }
+
+    function handleDeleteEvent(index) {
+        fullLogData.splice(index, 1); // Remove the event from the master list
+        recalculateDashboard(); // Recalculate and redraw everything
+    }
 
     function parseLogData(rawText) {
         const lines = rawText.split('\n');
@@ -677,9 +716,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // First Victim
         const firstDeath = sortedData[0];
-        const firstVictim = firstDeath.victim;
-        const firstVictimClass = getPlayerClass(firstVictim);
-        document.getElementById('first-victim').innerHTML = `<span class="${firstVictimClass}">${firstVictim}</span>`;
+        if (firstDeath) {
+            const firstVictim = firstDeath.victim;
+            const firstVictimClass = getPlayerClass(firstVictim);
+            document.getElementById('first-victim').innerHTML = `<span class="${firstVictimClass}">${firstVictim}</span>`;
+        } else {
+            document.getElementById('first-victim').textContent = '-';
+        }
+        
 
         // Kill Streak
         let currentStreak = 0;
@@ -798,7 +842,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function populateFullLogTable(data) {
         const tableBody = document.querySelector('#full-log-table tbody');
         tableBody.innerHTML = '';
-        data.forEach(event => {
+        data.forEach((event, index) => {
             const row = tableBody.insertRow();
             const victimClass = event.team === 'Amigos' ? 'friend' : 'enemy';
             const killersHtml = event.killers.map(k => {
@@ -807,11 +851,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join(', ');
             
             row.innerHTML = `
+                <td><span class="delete-btn" data-index="${index}">🗑️</span></td>
                 <td>${event.timestamp}</td>
                 <td class="${victimClass}">${event.victim}</td>
                 <td class="level">${event.level}</td>
                 <td>${killersHtml}</td>
             `;
+        });
+        // Add event listeners to the new delete buttons
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const indexToDelete = parseInt(e.target.getAttribute('data-index'));
+                handleDeleteEvent(indexToDelete);
+            });
         });
     }
 
