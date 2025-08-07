@@ -291,6 +291,10 @@
                  /* Creates 3 columns on large desktops */
                 grid-template-columns: repeat(3, 1fr);
             }
+            .stat-cards {
+                /* On large screens, show 5 cards per row in the stats section */
+                grid-template-columns: repeat(5, 1fr);
+            }
         }
 
         /* Smaller mobile devices */
@@ -342,7 +346,7 @@
         <div id="dashboard-content">
             <div class="card">
                 <h2>Resultado da Batalha</h2>
-                <div id="battle-result-card">
+                <div id="battle-result-card" class="stat-card">
                     <div class="value" id="battle-winner">-</div>
                     <div class="label" id="battle-winner-reason"></div>
                 </div>
@@ -454,23 +458,21 @@
     </div>
 
 <script>
+// SCRIPT ORIGINAL DO USUÁRIO RESTAURADO
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Element Selectors ---
     const analyzeBtn = document.getElementById('analyze-btn');
     const logInput = document.getElementById('log-input');
     const dashboardContent = document.getElementById('dashboard-content');
     const dashboardPlaceholder = document.getElementById('dashboard-placeholder');
     const searchInput = document.getElementById('searchInput');
+    
     const modal = document.getElementById('notificationModal');
     const modalText = document.getElementById('modal-text');
     const closeBtn = document.querySelector('.close-btn');
 
-    // --- State Variables ---
     let charts = {};
     let playerTeamMap = {};
-    let fullLogData = [];
 
-    // --- Modal Logic ---
     closeBtn.onclick = () => modal.style.display = "none";
     window.onclick = (event) => {
         if (event.target == modal) {
@@ -480,10 +482,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showModal(message) {
         modalText.textContent = message;
-        modal.style.display = "flex"; // Use flex for centering
+        modal.style.display = "flex"; // Ajuste para centralizar o modal
     }
 
-    // --- Event Listeners ---
     analyzeBtn.addEventListener('click', () => {
         const rawLog = logInput.value;
         if (!rawLog.trim()) {
@@ -491,7 +492,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Clear previous results
         Object.values(charts).forEach(chart => {
             if (chart) chart.destroy();
         });
@@ -502,34 +502,36 @@ document.addEventListener('DOMContentLoaded', () => {
             showModal("Nenhum dado de morte válido foi encontrado. Verifique o formato do texto. O log deve começar com [AMIGO] ou [INIMIGO].");
             return;
         }
-        
-        fullLogData = parsedData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-        buildPlayerTeamMap(fullLogData);
+        buildPlayerTeamMap(parsedData);
 
         dashboardPlaceholder.style.display = 'none';
-        dashboardContent.style.display = 'flex'; // Use flex to enable gap
+        dashboardContent.style.display = 'flex'; // Única alteração: display 'flex' para corresponder ao novo CSS
         
         try {
-            updateDashboard(fullLogData);
+            updateDashboard(parsedData);
         } catch (e) {
             console.error("Erro ao atualizar o dashboard:", e);
             showModal("Ocorreu um erro inesperado. Verifique o console do navegador para detalhes técnicos.");
         }
     });
     
-    searchInput.addEventListener('input', () => {
+    searchInput.addEventListener('keyup', () => {
         const filter = searchInput.value.toUpperCase();
-        const tableBody = document.querySelector('#full-log-table tbody');
-        const rows = tableBody.getElementsByTagName('tr');
+        const table = document.getElementById('full-log-table');
+        const tr = table.getElementsByTagName('tr');
 
-        for (let row of rows) {
+        for (let i = 1; i < tr.length; i++) {
+            const row = tr[i];
             const textValue = row.textContent || row.innerText;
-            row.style.display = textValue.toUpperCase().includes(filter) ? "" : "none";
+            if (textValue.toUpperCase().indexOf(filter) > -1) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
         }
     });
 
-    // --- Data Parsing ---
     function parseLogData(rawText) {
         const lines = rawText.split('\n');
         let combinedLine = '';
@@ -539,18 +541,15 @@ document.addEventListener('DOMContentLoaded', () => {
             line = line.replace(/<.*?> "FuritoBOT":\s*/, '').trim();
             if (!line) return;
 
-            // A new log entry starts with [TEAM]
             if (line.match(/^\[(AMIGO|INIMIGO)\]/)) {
                 if (combinedLine) {
                     processLine(combinedLine, deathEvents);
                 }
                 combinedLine = line;
             } else {
-                // Append continuation of the previous line
                 combinedLine += ' ' + line;
             }
         });
-        // Process the last line in the buffer
         if (combinedLine) {
             processLine(combinedLine, deathEvents);
         }
@@ -559,59 +558,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function processLine(fullLine, deathEvents) {
-        // Remove zero-width space characters that can mess up regex
         fullLine = fullLine.replace(/[\u200B-\u200D\uFEFF]/g, '');
 
-        // Regex for standard death log with killers and assists
         const mainDeathMatch = fullLine.match(/^\[(AMIGO|INIMIGO)\] - (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \+0000 UTC - (.+?) - (?:Killed|Crushed|Slain|Annihilated|Eliminated|Died)[\s]+at Level (\d+) by (.*?)(?:\.Assisted by (.*))?\.?$/);
         if (mainDeathMatch) {
             const [, teamTag, timestamp, victim, level, killersRaw, assistsRaw] = mainDeathMatch;
             const team = teamTag === 'AMIGO' ? 'Amigos' : 'Inimigos';
             const killers = killersRaw.split(/, | and /).map(k => k.trim());
-            const assists = assistsRaw ? assistsRaw.split(/, | and /).map(a => a.trim()) : [];
-            deathEvents.push({ team, timestamp, victim: victim.trim(), level: parseInt(level), killers, assists });
+            deathEvents.push({ team, timestamp, victim: victim.trim(), level: parseInt(level), killers, assists: [] });
             return;
         }
 
-        // Regex for simpler deaths (e.g., environmental)
         const simpleDeathMatch = fullLine.match(/^\[(AMIGO|INIMIGO)\] - (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \+0000 UTC - (.+?) - (?:Died|Killed|Crushed|Slain|Annihilated|Eliminated) at Level (\d+)\.?$/);
         if(simpleDeathMatch) {
-            const [, teamTag, timestamp, victim, level] = simpleDeathMatch;
-            const team = teamTag === 'AMIGO' ? 'Amigos' : 'Inimigos';
-            deathEvents.push({ team, timestamp, victim: victim.trim(), level: parseInt(level), killers: ['Monstro/Ambiente'], assists: [] });
+                const [, teamTag, timestamp, victim, level] = simpleDeathMatch;
+                const team = teamTag === 'AMIGO' ? 'Amigos' : 'Inimigos';
+                deathEvents.push({ team, timestamp, victim: victim.trim(), level: parseInt(level), killers: ['Monstro/Ambiente'], assists: [] });
         }
     }
 
     function buildPlayerTeamMap(data) {
         playerTeamMap = {};
         data.forEach(event => {
-            // Assign team to victim
             if (!playerTeamMap[event.victim]) {
                 playerTeamMap[event.victim] = event.team;
             }
-            // Infer team for killers if not already known
-            event.killers.forEach(killer => {
-                if (!playerTeamMap[killer] && killer !== 'Monstro/Ambiente') {
-                    // Killer's team is the opposite of the victim's team
-                    playerTeamMap[killer] = event.team === 'Amigos' ? 'Inimigos' : 'Amigos';
-                }
-            });
         });
     }
 
     function getPlayerClass(playerName) {
-        const team = playerTeamMap[playerName];
-        if (team) {
-            return team === 'Amigos' ? 'friend' : 'enemy';
+        if (playerTeamMap[playerName]) {
+            return playerTeamMap[playerName] === 'Amigos' ? 'friend' : 'enemy';
         }
-        // Fallback for names that might not be in the map but are known
         if (playerName.toLowerCase().includes('retro manda')) {
             return 'friend';
         }
-        return ''; // Neutral class for environment, etc.
+        return ''; // Neutral
     }
 
-    // --- Dashboard Update Functions ---
     function updateDashboard(data) {
         updateGeneralStats(data);
         updateTimelineChart(data);
@@ -622,6 +606,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateGeneralStats(data) {
+        const sortedData = [...data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
         document.getElementById('total-deaths').textContent = data.length;
         
         const avgLevel = data.length > 0 ? (data.reduce((sum, entry) => sum + entry.level, 0) / data.length).toFixed(0) : 0;
@@ -642,19 +628,19 @@ document.addEventListener('DOMContentLoaded', () => {
         data.forEach(event => {
             if (event.team === 'Amigos') {
                 friendDeaths++;
-                const hasEnemyKiller = event.killers.some(k => getPlayerClass(k) === 'enemy');
-                if (hasEnemyKiller) enemyKills++;
+                const hasEnemyKiller = event.killers.some(k => getPlayerClass(k) !== 'friend' && k !== 'Monstro/Ambiente');
+                if(hasEnemyKiller) enemyKills++;
             } else if (event.team === 'Inimigos') {
                 enemyDeaths++;
                 const hasFriendKiller = event.killers.some(k => getPlayerClass(k) === 'friend');
-                if (hasFriendKiller) friendKills++;
+                if(hasFriendKiller) friendKills++;
             }
         });
         document.getElementById('friend-deaths').textContent = friendDeaths;
         document.getElementById('enemy-deaths').textContent = enemyDeaths;
         
-        const friendKD = enemyDeaths > 0 ? (friendKills / enemyDeaths).toFixed(2) : friendKills.toFixed(2);
-        const enemyKD = friendDeaths > 0 ? (enemyKills / friendDeaths).toFixed(2) : enemyKills.toFixed(2);
+        const friendKD = friendDeaths > 0 ? (friendKills / friendDeaths).toFixed(2) : friendKills.toFixed(2);
+        const enemyKD = enemyDeaths > 0 ? (enemyKills / enemyDeaths).toFixed(2) : enemyKills.toFixed(2);
         document.getElementById('friend-kd').textContent = friendKD;
         document.getElementById('enemy-kd').textContent = enemyKD;
 
@@ -690,14 +676,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // First Victim
-        const firstDeath = data[0];
-        if (firstDeath) {
-            const firstVictim = firstDeath.victim;
-            const firstVictimClass = getPlayerClass(firstVictim);
-            document.getElementById('first-victim').innerHTML = `<span class="${firstVictimClass}">${firstVictim}</span>`;
-        } else {
-            document.getElementById('first-victim').textContent = '-';
-        }
+        const firstDeath = sortedData[0];
+        const firstVictim = firstDeath.victim;
+        const firstVictimClass = getPlayerClass(firstVictim);
+        document.getElementById('first-victim').innerHTML = `<span class="${firstVictimClass}">${firstVictim}</span>`;
 
         // Kill Streak
         let currentStreak = 0;
@@ -705,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentStreakTeam = null;
         let maxStreakTeam = null;
 
-        data.forEach(event => {
+        sortedData.forEach(event => {
             if (event.killers.includes('Monstro/Ambiente')) {
                 currentStreak = 0;
                 currentStreakTeam = null;
@@ -747,9 +729,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const deathCounts = {};
         data.forEach(event => {
-            deathCounts[event.victim] = (deathCounts[event.victim] || 0) + 1;
+            if (!deathCounts[event.victim]) {
+                deathCounts[event.victim] = { count: 0, team: event.team };
+            }
+            deathCounts[event.victim].count++;
         });
-        const sortedDeaths = Object.entries(deathCounts).sort(([, a], [, b]) => b - a).slice(0, 10);
+        const sortedDeaths = Object.entries(deathCounts).sort(([, a], [, b]) => b.count - a.count).slice(0, 10);
         populateDeathsTable('top-deaths-table', sortedDeaths);
         
         const sortedLevelDeaths = [...data].sort((a, b) => b.level - a.level).slice(0, 10);
@@ -757,7 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
         topLevelDeathsBody.innerHTML = '';
         sortedLevelDeaths.forEach(death => {
             const row = topLevelDeathsBody.insertRow();
-            const teamClass = getPlayerClass(death.victim);
+            const teamClass = death.team === 'Amigos' ? 'friend' : 'enemy';
             row.innerHTML = `<td class="${teamClass}">${death.victim}</td><td>${death.level}</td>`;
         });
     }
@@ -794,10 +779,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function populateDeathsTable(tableId, data) {
         const tableBody = document.querySelector(`#${tableId} tbody`);
         tableBody.innerHTML = '';
-        data.forEach(([name, count]) => {
+        data.forEach(([name, details]) => {
             const row = tableBody.insertRow();
-            const teamClass = getPlayerClass(name);
-            row.innerHTML = `<td class="${teamClass}">${name}</td><td>${count}</td>`;
+            const teamClass = details.team === 'Amigos' ? 'friend' : 'enemy';
+            row.innerHTML = `<td class="${teamClass}">${name}</td><td>${details.count}</td>`;
         });
     }
 
@@ -815,14 +800,14 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = '';
         data.forEach(event => {
             const row = tableBody.insertRow();
-            const victimClass = getPlayerClass(event.victim);
+            const victimClass = event.team === 'Amigos' ? 'friend' : 'enemy';
             const killersHtml = event.killers.map(k => {
                 const killerClass = getPlayerClass(k);
                 return `<span class="${killerClass}">${k}</span>`;
             }).join(', ');
             
             row.innerHTML = `
-                <td>${new Date(event.timestamp).toLocaleString('pt-BR')}</td>
+                <td>${event.timestamp}</td>
                 <td class="${victimClass}">${event.victim}</td>
                 <td class="level">${event.level}</td>
                 <td>${killersHtml}</td>
@@ -834,9 +819,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('battle-flow-container');
         container.innerHTML = '';
 
-        data.forEach(event => {
+        const sortedData = [...data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        sortedData.forEach(event => {
             const entry = document.createElement('div');
-            const victimClass = getPlayerClass(event.victim);
+            const victimClass = event.team === 'Amigos' ? 'friend' : 'enemy';
             const entryClass = event.team === 'Amigos' ? 'friend-death' : 'enemy-death';
             entry.className = `flow-entry ${entryClass}`;
 
@@ -891,19 +878,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }]
             },
             options: {
-                responsive: true,
                 maintainAspectRatio: false,
                 scales: {
                     x: {
                         type: 'time',
                         time: {
-                            unit: 'minute',
-                            tooltipFormat: 'dd/MM/yyyy HH:mm:ss'
+                            unit: 'hour',
+                            tooltipFormat: 'dd/MM/yyyy HH:mm'
                         },
-                        title: { display: true, text: 'Hora da Morte', color: 'white' },
+                        title: { display: true, text: 'Data', color: 'white' },
                         ticks: { color: 'white' }
                     },
                     y: {
+                       display: true,
                        beginAtZero: false,
                        title: { display: true, text: 'Level da Vítima', color: 'white' },
                        ticks: { color: 'white' }
@@ -911,7 +898,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 plugins: {
                     legend: {
-                        labels: { color: 'white' }
+                        labels: {
+                            color: 'white'
+                        }
                     },
                     tooltip: {
                         callbacks: {
@@ -922,10 +911,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     },
                     zoom: {
-                        pan: { enabled: true, mode: 'x' },
+                        pan: {
+                            enabled: true,
+                            mode: 'x'
+                        },
                         zoom: {
-                            wheel: { enabled: true },
-                            pinch: { enabled: true },
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
                             mode: 'x',
                         }
                     }
