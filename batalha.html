@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Análise de Batalha</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #2c2f33;
+            --card-bg-color: #23272a;
+            --header-color: #ffffff;
+            --text-color: #c8c8c8;
+            --accent-color: #7289da;
+            --friend-color: #43b581;
+            --enemy-color: #f04747;
+            --border-color: #40444b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s;
+        }
+
+        /* Main container for the whole page */
+        .main-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg-color);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        /* Grid container for sections with multiple cards */
+        .card-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Mobile-first: single column */
+            gap: 20px;
+        }
+
+        h1, h2 {
+            color: var(--header-color);
+            margin-top: 0;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+        
+        .chart-instructions {
+            font-size: 0.9em;
+            color: var(--text-color);
+            text-align: center;
+            margin-top: -10px;
+            padding-bottom: 10px;
+        }
+        
+        #timeline-chart-container {
+            position: relative;
+            height: 350px;
+        }
+
+        #data-input-area {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #log-input {
+            width: 100%;
+            min-height: 150px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 5px;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        #analyze-btn {
+            padding: 12px 20px;
+            background-color: var(--accent-color);
+            color: var(--header-color);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        #analyze-btn:hover {
+            background-color: #5f73bc;
+        }
+
+        #dashboard-content {
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        #dashboard-placeholder {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: #888;
+        }
+
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            text-align: center;
+        }
+
+        .stat-card {
+            background-color: var(--bg-color);
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: var(--accent-color);
+            word-wrap: break-word;
+            min-height: 40px;
+        }
+        .stat-card .label {
+            font-size: 1em;
+            color: var(--text-color);
+            margin-top: 5px;
+        }
+        
+        #battle-result-card {
+            border-width: 2px;
+            text-align: center;
+            padding: 20px;
+        }
+        #battle-result-card .value {
+            font-size: 2.5em;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: var(--bg-color);
+            cursor: pointer;
+        }
+        
+        tbody tr:hover {
+            background-color: #2a2d31;
+        }
+
+        .friend { color: var(--friend-color); font-weight: bold; }
+        .enemy { color: var(--enemy-color); font-weight: bold; }
+        .level { font-style: italic; color: #f9a825; }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--header-color);
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        
+        #battle-flow-container {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .flow-entry {
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            border-left: 5px solid;
+        }
+        
+        .flow-entry.friend-death { border-left-color: var(--enemy-color); }
+        .flow-entry.enemy-death { border-left-color: var(--friend-color); }
+        
+        .flow-entry .timestamp {
+            font-size: 0.8em;
+            color: #888;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg-color);
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 500px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .close-btn {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* --- Media Queries for Responsiveness --- */
+
+        /* Tablets and larger devices */
+        @media (min-width: 768px) {
+            .card-grid {
+                /* Creates 2 columns on tablets */
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .card-grid.tri-column {
+                 /* Creates 3 columns on large desktops */
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        /* Smaller mobile devices */
+        @media (max-width: 600px) {
+            .main-container {
+                padding: 10px;
+            }
+            .card {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            h2 {
+                font-size: 1.25em;
+            }
+            .stat-card .value {
+                font-size: 2em;
+            }
+            #analyze-btn {
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="notificationModal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <p id="modal-text"></p>
+      </div>
+    </div>
+
+    <div class="main-container">
+        <div class="card">
+            <h1>📊 Dashboard de Análise de Batalha</h1>
+            <div id="data-input-area">
+                <textarea id="log-input" placeholder="Cole aqui os logs do seu bot do TS3..."></textarea>
+                <button id="analyze-btn">Analisar Dados</button>
+            </div>
+        </div>
+
+        <div id="dashboard-placeholder" class="card">
+            <p>Aguardando dados para análise...</p>
+        </div>
+
+        <!-- This container will be shown after analysis -->
+        <div id="dashboard-content">
+            <div class="card">
+                <h2>Resultado da Batalha</h2>
+                <div id="battle-result-card">
+                    <div class="value" id="battle-winner">-</div>
+                    <div class="label" id="battle-winner-reason"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Visão Geral</h2>
+                <div class="stat-cards">
+                    <div class="stat-card"><div class="value" id="total-deaths">0</div><div class="label">Total de Mortes</div></div>
+                    <div class="stat-card"><div class="value" id="friend-deaths">0</div><div class="label">Amigos Mortos</div></div>
+                    <div class="stat-card"><div class="value" id="enemy-deaths">0</div><div class="label">Inimigos Mortos</div></div>
+                    <div class="stat-card"><div class="value" id="friend-kd">0.00</div><div class="label">K/D Amigos</div></div>
+                    <div class="stat-card"><div class="value" id="enemy-kd">0.00</div><div class="label">K/D Inimigos</div></div>
+                    <div class="stat-card"><div class="value" id="top-killer">-</div><div class="label">MVP da Batalha</div></div>
+                    <div class="stat-card"><div class="value" id="most-deaths-player">-</div><div class="label">Mais Morreu</div></div>
+                    <div class="stat-card"><div class="value" id="avg-level">0</div><div class="label">Média de Level</div></div>
+                    <div class="stat-card"><div class="value" id="first-victim">-</div><div class="label">Primeira Vítima</div></div>
+                    <div class="stat-card"><div class="value" id="kill-streak">-</div><div class="label">Maior Sequência</div></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Linha do Tempo das Mortes</h2>
+                <p class="chart-instructions">Use a roda do mouse para dar zoom. Clique e arraste para mover.</p>
+                <div id="timeline-chart-container">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                 <h2>Fluxo da Batalha</h2>
+                <div id="battle-flow-container"></div>
+            </div>
+
+            <div class="card-grid tri-column">
+                <div class="card">
+                    <h2>🏆 Top 10 - Kills</h2>
+                    <div class="table-wrapper">
+                        <table id="top-killers-table">
+                            <thead><tr><th>Jogador</th><th>Participações</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>💀 Top 10 - Mortes</h2>
+                    <div class="table-wrapper">
+                        <table id="top-deaths-table">
+                            <thead><tr><th>Jogador</th><th>Mortes</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>🔝 Maiores Levels Abatidos</h2>
+                    <div class="table-wrapper">
+                        <table id="top-level-deaths-table">
+                            <thead><tr><th>Jogador</th><th>Level</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-grid">
+                <div class="card">
+                    <h2>Amigos Mortos (Únicos)</h2>
+                    <div class="table-wrapper">
+                        <table id="unique-friend-deaths-table">
+                            <thead><tr><th>Jogador</th><th>Vezes que Morreu</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>Inimigos Mortos (Únicos)</h2>
+                    <div class="table-wrapper">
+                        <table id="unique-enemy-deaths-table">
+                            <thead><tr><th>Jogador</th><th>Vezes que Morreu</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>O que é K/D Ratio?</h2>
+                <p>K/D Ratio (Kill/Death Ratio) é uma métrica que mede a eficiência em combate. Ela é calculada dividindo o número de abates (Kills) pelo número de vezes que um time ou jogador morreu (Deaths). Um K/D acima de 1.0 significa que o time conseguiu mais abates do que sofreu mortes, indicando um bom desempenho.</p>
+            </div>
+
+            <div class="card">
+                <h2>📜 Log de Eventos Completo</h2>
+                <input type="text" id="searchInput" class="search-box" placeholder="Pesquisar por jogador, level ou data...">
+                <div class="table-wrapper">
+                    <table id="full-log-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="timestamp">Data</th>
+                                <th data-sort="victim">Vítima</th>
+                                <th data-sort="level">Level</th>
+                                <th data-sort="killers">Responsáveis pela Morte</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Element Selectors ---
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const logInput = document.getElementById('log-input');
+    const dashboardContent = document.getElementById('dashboard-content');
+    const dashboardPlaceholder = document.getElementById('dashboard-placeholder');
+    const searchInput = document.getElementById('searchInput');
+    const modal = document.getElementById('notificationModal');
+    const modalText = document.getElementById('modal-text');
+    const closeBtn = document.querySelector('.close-btn');
+
+    // --- State Variables ---
+    let charts = {};
+    let playerTeamMap = {};
+    let fullLogData = [];
+
+    // --- Modal Logic ---
+    closeBtn.onclick = () => modal.style.display = "none";
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    };
+
+    function showModal(message) {
+        modalText.textContent = message;
+        modal.style.display = "flex"; // Use flex for centering
+    }
+
+    // --- Event Listeners ---
+    analyzeBtn.addEventListener('click', () => {
+        const rawLog = logInput.value;
+        if (!rawLog.trim()) {
+            showModal("Por favor, cole os dados dos logs na área de texto.");
+            return;
+        }
+        
+        // Clear previous results
+        Object.values(charts).forEach(chart => {
+            if (chart) chart.destroy();
+        });
+        charts = {};
+
+        const parsedData = parseLogData(rawLog);
+        if (parsedData.length === 0) {
+            showModal("Nenhum dado de morte válido foi encontrado. Verifique o formato do texto. O log deve começar com [AMIGO] ou [INIMIGO].");
+            return;
+        }
+        
+        fullLogData = parsedData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        buildPlayerTeamMap(fullLogData);
+
+        dashboardPlaceholder.style.display = 'none';
+        dashboardContent.style.display = 'flex'; // Use flex to enable gap
+        
+        try {
+            updateDashboard(fullLogData);
+        } catch (e) {
+            console.error("Erro ao atualizar o dashboard:", e);
+            showModal("Ocorreu um erro inesperado. Verifique o console do navegador para detalhes técnicos.");
+        }
+    });
+    
+    searchInput.addEventListener('input', () => {
+        const filter = searchInput.value.toUpperCase();
+        const tableBody = document.querySelector('#full-log-table tbody');
+        const rows = tableBody.getElementsByTagName('tr');
+
+        for (let row of rows) {
+            const textValue = row.textContent || row.innerText;
+            row.style.display = textValue.toUpperCase().includes(filter) ? "" : "none";
+        }
+    });
+
+    // --- Data Parsing ---
+    function parseLogData(rawText) {
+        const lines = rawText.split('\n');
+        let combinedLine = '';
+        const deathEvents = [];
+
+        lines.forEach(line => {
+            line = line.replace(/<.*?> "FuritoBOT":\s*/, '').trim();
+            if (!line) return;
+
+            // A new log entry starts with [TEAM]
+            if (line.match(/^\[(AMIGO|INIMIGO)\]/)) {
+                if (combinedLine) {
+                    processLine(combinedLine, deathEvents);
+                }
+                combinedLine = line;
+            } else {
+                // Append continuation of the previous line
+                combinedLine += ' ' + line;
+            }
+        });
+        // Process the last line in the buffer
+        if (combinedLine) {
+            processLine(combinedLine, deathEvents);
+        }
+        
+        return deathEvents.filter(event => event.victim && event.level);
+    }
+
+    function processLine(fullLine, deathEvents) {
+        // Remove zero-width space characters that can mess up regex
+        fullLine = fullLine.replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+        // Regex for standard death log with killers and assists
+        const mainDeathMatch = fullLine.match(/^\[(AMIGO|INIMIGO)\] - (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \+0000 UTC - (.+?) - (?:Killed|Crushed|Slain|Annihilated|Eliminated|Died)[\s]+at Level (\d+) by (.*?)(?:\.Assisted by (.*))?\.?$/);
+        if (mainDeathMatch) {
+            const [, teamTag, timestamp, victim, level, killersRaw, assistsRaw] = mainDeathMatch;
+            const team = teamTag === 'AMIGO' ? 'Amigos' : 'Inimigos';
+            const killers = killersRaw.split(/, | and /).map(k => k.trim());
+            const assists = assistsRaw ? assistsRaw.split(/, | and /).map(a => a.trim()) : [];
+            deathEvents.push({ team, timestamp, victim: victim.trim(), level: parseInt(level), killers, assists });
+            return;
+        }
+
+        // Regex for simpler deaths (e.g., environmental)
+        const simpleDeathMatch = fullLine.match(/^\[(AMIGO|INIMIGO)\] - (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \+0000 UTC - (.+?) - (?:Died|Killed|Crushed|Slain|Annihilated|Eliminated) at Level (\d+)\.?$/);
+        if(simpleDeathMatch) {
+            const [, teamTag, timestamp, victim, level] = simpleDeathMatch;
+            const team = teamTag === 'AMIGO' ? 'Amigos' : 'Inimigos';
+            deathEvents.push({ team, timestamp, victim: victim.trim(), level: parseInt(level), killers: ['Monstro/Ambiente'], assists: [] });
+        }
+    }
+
+    function buildPlayerTeamMap(data) {
+        playerTeamMap = {};
+        data.forEach(event => {
+            // Assign team to victim
+            if (!playerTeamMap[event.victim]) {
+                playerTeamMap[event.victim] = event.team;
+            }
+            // Infer team for killers if not already known
+            event.killers.forEach(killer => {
+                if (!playerTeamMap[killer] && killer !== 'Monstro/Ambiente') {
+                    // Killer's team is the opposite of the victim's team
+                    playerTeamMap[killer] = event.team === 'Amigos' ? 'Inimigos' : 'Amigos';
+                }
+            });
+        });
+    }
+
+    function getPlayerClass(playerName) {
+        const team = playerTeamMap[playerName];
+        if (team) {
+            return team === 'Amigos' ? 'friend' : 'enemy';
+        }
+        // Fallback for names that might not be in the map but are known
+        if (playerName.toLowerCase().includes('retro manda')) {
+            return 'friend';
+        }
+        return ''; // Neutral class for environment, etc.
+    }
+
+    // --- Dashboard Update Functions ---
+    function updateDashboard(data) {
+        updateGeneralStats(data);
+        updateTimelineChart(data);
+        updateBattleFlow(data);
+        updateRankings(data);
+        updateUniqueDeathsTables(data);
+        populateFullLogTable(data);
+    }
+
+    function updateGeneralStats(data) {
+        document.getElementById('total-deaths').textContent = data.length;
+        
+        const avgLevel = data.length > 0 ? (data.reduce((sum, entry) => sum + entry.level, 0) / data.length).toFixed(0) : 0;
+        document.getElementById('avg-level').textContent = avgLevel;
+
+        const deathCounts = data.reduce((acc, entry) => {
+            acc[entry.victim] = (acc[entry.victim] || 0) + 1;
+            return acc;
+        }, {});
+        const mostDeathsPlayer = Object.keys(deathCounts).length > 0 ? Object.keys(deathCounts).reduce((a, b) => deathCounts[a] > deathCounts[b] ? a : b) : '-';
+        document.getElementById('most-deaths-player').textContent = mostDeathsPlayer;
+
+        let friendDeaths = 0;
+        let enemyDeaths = 0;
+        let friendKills = 0;
+        let enemyKills = 0;
+
+        data.forEach(event => {
+            if (event.team === 'Amigos') {
+                friendDeaths++;
+                const hasEnemyKiller = event.killers.some(k => getPlayerClass(k) === 'enemy');
+                if (hasEnemyKiller) enemyKills++;
+            } else if (event.team === 'Inimigos') {
+                enemyDeaths++;
+                const hasFriendKiller = event.killers.some(k => getPlayerClass(k) === 'friend');
+                if (hasFriendKiller) friendKills++;
+            }
+        });
+        document.getElementById('friend-deaths').textContent = friendDeaths;
+        document.getElementById('enemy-deaths').textContent = enemyDeaths;
+        
+        const friendKD = enemyDeaths > 0 ? (friendKills / enemyDeaths).toFixed(2) : friendKills.toFixed(2);
+        const enemyKD = friendDeaths > 0 ? (enemyKills / friendDeaths).toFixed(2) : enemyKills.toFixed(2);
+        document.getElementById('friend-kd').textContent = friendKD;
+        document.getElementById('enemy-kd').textContent = enemyKD;
+
+        const killerCounts = {};
+        data.forEach(event => {
+            event.killers.forEach(killer => {
+                if(killer.includes(' of ') || killer === 'Monstro/Ambiente') return;
+                killerCounts[killer] = (killerCounts[killer] || 0) + 1;
+            });
+        });
+        const topKiller = Object.keys(killerCounts).length > 0 ? Object.keys(killerCounts).reduce((a, b) => killerCounts[a] > killerCounts[b] ? a : b) : '-';
+        document.getElementById('top-killer').textContent = topKiller;
+
+        // Battle Result
+        const winnerEl = document.getElementById('battle-winner');
+        const reasonEl = document.getElementById('battle-winner-reason');
+        const resultCard = document.getElementById('battle-result-card');
+        if (parseFloat(friendKD) > parseFloat(enemyKD)) {
+            winnerEl.textContent = "Amigos Venceram";
+            winnerEl.className = "value friend";
+            resultCard.style.borderColor = "var(--friend-color)";
+            reasonEl.textContent = `Com um K/D Ratio de ${friendKD} contra ${enemyKD}`;
+        } else if (parseFloat(enemyKD) > parseFloat(friendKD)) {
+            winnerEl.textContent = "Inimigos Venceram";
+            winnerEl.className = "value enemy";
+            resultCard.style.borderColor = "var(--enemy-color)";
+            reasonEl.textContent = `Com um K/D Ratio de ${enemyKD} contra ${friendKD}`;
+        } else {
+            winnerEl.textContent = "Empate";
+            winnerEl.className = "value";
+            resultCard.style.borderColor = "var(--border-color)";
+            reasonEl.textContent = `Ambos os times tiveram um K/D Ratio de ${friendKD}`;
+        }
+
+        // First Victim
+        const firstDeath = data[0];
+        if (firstDeath) {
+            const firstVictim = firstDeath.victim;
+            const firstVictimClass = getPlayerClass(firstVictim);
+            document.getElementById('first-victim').innerHTML = `<span class="${firstVictimClass}">${firstVictim}</span>`;
+        } else {
+            document.getElementById('first-victim').textContent = '-';
+        }
+
+        // Kill Streak
+        let currentStreak = 0;
+        let maxStreak = 0;
+        let currentStreakTeam = null;
+        let maxStreakTeam = null;
+
+        data.forEach(event => {
+            if (event.killers.includes('Monstro/Ambiente')) {
+                currentStreak = 0;
+                currentStreakTeam = null;
+                return;
+            }
+            
+            const killTeam = event.team === 'Amigos' ? 'Inimigos' : 'Amigos';
+
+            if (killTeam === currentStreakTeam) {
+                currentStreak++;
+            } else {
+                currentStreak = 1;
+                currentStreakTeam = killTeam;
+            }
+
+            if (currentStreak > maxStreak) {
+                maxStreak = currentStreak;
+                maxStreakTeam = currentStreakTeam;
+            }
+        });
+        const streakEl = document.getElementById('kill-streak');
+        if (maxStreakTeam) {
+            streakEl.innerHTML = `Sequência de ${maxStreak} para os <span class="${maxStreakTeam === 'Amigos' ? 'friend' : 'enemy'}">${maxStreakTeam}</span>`;
+        } else {
+            streakEl.textContent = '-';
+        }
+    }
+    
+    function updateRankings(data) {
+        const killerCounts = {};
+        data.forEach(event => {
+            event.killers.forEach(killer => {
+                if(killer.includes(' of ') || killer === 'Monstro/Ambiente') return;
+                killerCounts[killer] = (killerCounts[killer] || 0) + 1;
+            });
+        });
+        const sortedKills = Object.entries(killerCounts).sort(([, a], [, b]) => b - a).slice(0, 10);
+        populateTable('top-killers-table', sortedKills);
+
+        const deathCounts = {};
+        data.forEach(event => {
+            deathCounts[event.victim] = (deathCounts[event.victim] || 0) + 1;
+        });
+        const sortedDeaths = Object.entries(deathCounts).sort(([, a], [, b]) => b - a).slice(0, 10);
+        populateDeathsTable('top-deaths-table', sortedDeaths);
+        
+        const sortedLevelDeaths = [...data].sort((a, b) => b.level - a.level).slice(0, 10);
+        const topLevelDeathsBody = document.querySelector('#top-level-deaths-table tbody');
+        topLevelDeathsBody.innerHTML = '';
+        sortedLevelDeaths.forEach(death => {
+            const row = topLevelDeathsBody.insertRow();
+            const teamClass = getPlayerClass(death.victim);
+            row.innerHTML = `<td class="${teamClass}">${death.victim}</td><td>${death.level}</td>`;
+        });
+    }
+
+    function updateUniqueDeathsTables(data) {
+        const friendDeaths = {};
+        const enemyDeaths = {};
+
+        data.forEach(event => {
+            if (event.team === 'Amigos') {
+                friendDeaths[event.victim] = (friendDeaths[event.victim] || 0) + 1;
+            } else if (event.team === 'Inimigos') {
+                enemyDeaths[event.victim] = (enemyDeaths[event.victim] || 0) + 1;
+            }
+        });
+
+        const sortedFriendDeaths = Object.entries(friendDeaths).sort(([, a], [, b]) => b - a);
+        const sortedEnemyDeaths = Object.entries(enemyDeaths).sort(([, a], [, b]) => b - a);
+
+        populateSimpleDeathsTable('unique-friend-deaths-table', sortedFriendDeaths, 'friend');
+        populateSimpleDeathsTable('unique-enemy-deaths-table', sortedEnemyDeaths, 'enemy');
+    }
+    
+    function populateTable(tableId, data) {
+        const tableBody = document.querySelector(`#${tableId} tbody`);
+        tableBody.innerHTML = '';
+        data.forEach(([name, count]) => {
+            const row = tableBody.insertRow();
+            const teamClass = getPlayerClass(name);
+            row.innerHTML = `<td class="${teamClass}">${name}</td><td>${count}</td>`;
+        });
+    }
+
+    function populateDeathsTable(tableId, data) {
+        const tableBody = document.querySelector(`#${tableId} tbody`);
+        tableBody.innerHTML = '';
+        data.forEach(([name, count]) => {
+            const row = tableBody.insertRow();
+            const teamClass = getPlayerClass(name);
+            row.innerHTML = `<td class="${teamClass}">${name}</td><td>${count}</td>`;
+        });
+    }
+
+    function populateSimpleDeathsTable(tableId, data, teamClass) {
+        const tableBody = document.querySelector(`#${tableId} tbody`);
+        tableBody.innerHTML = '';
+        data.forEach(([name, count]) => {
+            const row = tableBody.insertRow();
+            row.innerHTML = `<td class="${teamClass}">${name}</td><td>${count}</td>`;
+        });
+    }
+
+    function populateFullLogTable(data) {
+        const tableBody = document.querySelector('#full-log-table tbody');
+        tableBody.innerHTML = '';
+        data.forEach(event => {
+            const row = tableBody.insertRow();
+            const victimClass = getPlayerClass(event.victim);
+            const killersHtml = event.killers.map(k => {
+                const killerClass = getPlayerClass(k);
+                return `<span class="${killerClass}">${k}</span>`;
+            }).join(', ');
+            
+            row.innerHTML = `
+                <td>${new Date(event.timestamp).toLocaleString('pt-BR')}</td>
+                <td class="${victimClass}">${event.victim}</td>
+                <td class="level">${event.level}</td>
+                <td>${killersHtml}</td>
+            `;
+        });
+    }
+
+    function updateBattleFlow(data) {
+        const container = document.getElementById('battle-flow-container');
+        container.innerHTML = '';
+
+        data.forEach(event => {
+            const entry = document.createElement('div');
+            const victimClass = getPlayerClass(event.victim);
+            const entryClass = event.team === 'Amigos' ? 'friend-death' : 'enemy-death';
+            entry.className = `flow-entry ${entryClass}`;
+
+            const killersHtml = event.killers.map(k => {
+                const killerClass = getPlayerClass(k);
+                return `<span class="${killerClass}">${k}</span>`;
+            }).join(', ');
+
+            const time = new Date(event.timestamp).toLocaleTimeString('pt-BR');
+
+            entry.innerHTML = `
+                <span class="timestamp">${time}</span>
+                <div>
+                    <strong class="${victimClass}">${event.victim}</strong>
+                    <span class="level"> (Lvl ${event.level})</span>
+                    foi morto por 
+                    <strong>${killersHtml}</strong>
+                </div>
+            `;
+            container.appendChild(entry);
+        });
+    }
+
+    function updateTimelineChart(data) {
+        if (charts.timeline) {
+            charts.timeline.destroy();
+        }
+
+        const friendDeathsData = data.filter(d => d.team === 'Amigos').map(d => ({ x: d.timestamp, y: d.level, player: d.victim }));
+        const enemyDeathsData = data.filter(d => d.team === 'Inimigos').map(d => ({ x: d.timestamp, y: d.level, player: d.victim }));
+
+        const ctx = document.getElementById('timelineChart').getContext('2d');
+        charts.timeline = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Amigo Morto',
+                    data: friendDeathsData,
+                    backgroundColor: 'rgba(67, 181, 129, 0.7)',
+                    borderColor: 'rgba(67, 181, 129, 1)',
+                    borderWidth: 1,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }, {
+                    label: 'Inimigo Morto',
+                    data: enemyDeathsData,
+                    backgroundColor: 'rgba(240, 71, 71, 0.7)',
+                    borderColor: 'rgba(240, 71, 71, 1)',
+                    borderWidth: 1,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'minute',
+                            tooltipFormat: 'dd/MM/yyyy HH:mm:ss'
+                        },
+                        title: { display: true, text: 'Hora da Morte', color: 'white' },
+                        ticks: { color: 'white' }
+                    },
+                    y: {
+                       beginAtZero: false,
+                       title: { display: true, text: 'Level da Vítima', color: 'white' },
+                       ticks: { color: 'white' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: 'white' }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const point = context.raw;
+                                return `${point.player} (Level ${point.y})`;
+                            }
+                        }
+                    },
+                    zoom: {
+                        pan: { enabled: true, mode: 'x' },
+                        zoom: {
+                            wheel: { enabled: true },
+                            pinch: { enabled: true },
+                            mode: 'x',
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+});
+</script>
+
+</body>
+</html>
