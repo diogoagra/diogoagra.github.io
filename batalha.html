@@ -519,9 +519,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         fullLogData = parseLogData(rawLog);
         if (fullLogData.length === 0) {
-            showModal("Nenhum dado de morte válido foi encontrado. Verifique o formato do texto. O log deve começar com [AMIGO] ou [INIMIGO].");
+            showModal("Nenhuma morte de jogador (PvP) foi encontrada. Verifique o formato do texto.");
             return;
         }
+        
+        fullLogData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         
         recalculateDashboard();
     });
@@ -546,6 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fullLogData.length === 0) {
             dashboardPlaceholder.style.display = 'block';
             dashboardContent.style.display = 'none';
+            showModal("Nenhuma morte de jogador (PvP) foi encontrada após a filtragem.");
             return;
         }
 
@@ -571,50 +574,89 @@ document.addEventListener('DOMContentLoaded', () => {
         recalculateDashboard(); // Recalculate and redraw everything
     }
 
+    // --- START: ROBUST PARSING LOGIC ---
     function parseLogData(rawText) {
-        const lines = rawText.split('\n');
-        let combinedLine = '';
+        // Pre-process the entire text to remove invisible characters (like zero-width spaces)
+        // that can break the parsing, especially within timestamps.
+        const cleanRawText = rawText.replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+        const lines = cleanRawText.split('\n');
         const deathEvents = [];
+        let currentLogEntry = '';
+        const processedDeaths = new Set(); // EVOLUÇÃO: Conjunto para rastrear mortes duplicadas.
+
+        // Regex to remove the bot prefix from continuation lines.
+        const prefixRegex = /^(￼?<[^>]+>\s*["“][^"”]+["”]:\s*)?/;
 
         lines.forEach(line => {
-            line = line.replace(/<.*?> "FuritoBOT":\s*/, '').trim();
-            if (!line) return;
+            // Clean the prefix from the beginning of the line.
+            const cleanedLine = line.replace(prefixRegex, '').trim();
 
-            if (line.match(/^\[(AMIGO|INIMIGO)\]/)) {
-                if (combinedLine) {
-                    processLine(combinedLine, deathEvents);
+            if (!cleanedLine) {
+                return; // Skip empty lines
+            }
+
+            // Check if the cleaned line marks the beginning of a new death event.
+            const isNewEntry = cleanedLine.startsWith('[AMIGO]') || cleanedLine.startsWith('[INIMIGO]') || cleanedLine.startsWith('[NEUTRO]');
+
+            if (isNewEntry) {
+                // If a log entry is already being built, process it first.
+                if (currentLogEntry) {
+                    processLine(currentLogEntry, deathEvents, processedDeaths);
                 }
-                combinedLine = line;
-            } else {
-                combinedLine += ' ' + line;
+                // Start a new log entry.
+                currentLogEntry = cleanedLine;
+            } else if (currentLogEntry) {
+                // This is a continuation of the previous line.
+                // We concatenate directly without a space, as the bot's message splitting
+                // doesn't add extra spaces. This correctly joins broken words and timestamps.
+                currentLogEntry += cleanedLine;
             }
         });
-        if (combinedLine) {
-            processLine(combinedLine, deathEvents);
+
+        // Process the last remaining log entry after the loop finishes.
+        if (currentLogEntry) {
+            processLine(currentLogEntry, deathEvents, processedDeaths);
         }
         
-        return deathEvents.filter(event => event.victim && event.level);
+        return deathEvents;
     }
 
-    function processLine(fullLine, deathEvents) {
-        fullLine = fullLine.replace(/[\u200B-\u200D\uFEFF]/g, '');
+    function processLine(fullLine, deathEvents, processedDeaths) {
+        // The line is already mostly clean, just need to normalize spaces.
+        let cleanedLine = fullLine.replace(/\s+/g, ' ').trim();
 
-        const mainDeathMatch = fullLine.match(/^\[(AMIGO|INIMIGO)\] - (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \+0000 UTC - (.+?) - (?:Killed|Crushed|Slain|Annihilated|Eliminated|Died)[\s]+at Level (\d+) by (.*?)(?:\.Assisted by (.*))?\.?$/);
-        if (mainDeathMatch) {
-            const [, teamTag, timestamp, victim, level, killersRaw, assistsRaw] = mainDeathMatch;
-            const team = teamTag === 'AMIGO' ? 'Amigos' : 'Inimigos';
+        // A regex agora ignora mortes que usam a palavra "Died", focando apenas em mortes PvP (Killed, Crushed, etc.).
+        const pvpDeathMatch = cleanedLine.match(/^\[(AMIGO|INIMIGO|NEUTRO)\] - ([\d\- :]+) \+0000 UTC - (.+?) - (?:Killed|Crushed|Slain|Annihilated|Eliminated) at Level (\d+) by (.*?)(?:\.Assisted by (.*))?\.?$/);
+        
+        if (pvpDeathMatch) {
+            const [, teamTag, timestampRaw, victim, level, killersRaw, assistsRaw] = pvpDeathMatch;
+            
+            const timestamp = timestampRaw.trim().replace(' ', 'T');
+            const victimName = victim.trim();
+
+            // EVOLUÇÃO: Lógica para ignorar duplicatas.
+            // Cria um identificador único para cada morte (timestamp + nome da vítima).
+            const deathIdentifier = `${timestamp}-${victimName}`;
+            if (processedDeaths.has(deathIdentifier)) {
+                return; // É uma duplicata, então ignoramos.
+            }
+            processedDeaths.add(deathIdentifier); // Adiciona ao conjunto para prevenir futuras duplicatas.
+
             const killers = killersRaw.split(/, | and /).map(k => k.trim());
-            deathEvents.push({ team, timestamp, victim: victim.trim(), level: parseInt(level), killers, assists: [] });
+            
+            let team = '';
+            if (teamTag === 'AMIGO') team = 'Amigos';
+            else if (teamTag === 'INIMIGO') team = 'Inimigos';
+            else team = 'Neutros';
+
+            deathEvents.push({ team, timestamp, victim: victimName, level: parseInt(level), killers, assists: [] });
             return;
         }
-
-        const simpleDeathMatch = fullLine.match(/^\[(AMIGO|INIMIGO)\] - (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \+0000 UTC - (.+?) - (?:Died|Killed|Crushed|Slain|Annihilated|Eliminated) at Level (\d+)\.?$/);
-        if(simpleDeathMatch) {
-                const [, teamTag, timestamp, victim, level] = simpleDeathMatch;
-                const team = teamTag === 'AMIGO' ? 'Amigos' : 'Inimigos';
-                deathEvents.push({ team, timestamp, victim: victim.trim(), level: parseInt(level), killers: ['Monstro/Ambiente'], assists: [] });
-        }
+        
+        // Qualquer outra linha, incluindo as com "Died at Level", será ignorada pois não corresponde à regex acima.
     }
+    // --- END: ROBUST PARSING LOGIC ---
 
     function buildPlayerTeamMap(data) {
         playerTeamMap = {};
@@ -627,11 +669,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getPlayerClass(playerName) {
         if (playerTeamMap[playerName]) {
-            return playerTeamMap[playerName] === 'Amigos' ? 'friend' : 'enemy';
+            const team = playerTeamMap[playerName];
+            if (team === 'Amigos') return 'friend';
+            if (team === 'Inimigos') return 'enemy';
         }
         // Fallback for players who only get kills and never die.
-        // We can't know their team for sure, so we treat them as neutral for coloring.
-        // The kill counting logic below will handle the points correctly.
         if (playerName.toLowerCase().includes('retro manda')) {
             return 'friend';
         }
@@ -648,8 +690,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateGeneralStats(data) {
-        const sortedData = [...data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
+        // Data is already pre-sorted, so no need to re-sort here.
+        // Sorting is crucial for 'First Victim' and 'Kill Streak'.
         document.getElementById('total-deaths').textContent = data.length;
         
         const avgLevel = data.length > 0 ? (data.reduce((sum, entry) => sum + entry.level, 0) / data.length).toFixed(0) : 0;
@@ -667,25 +709,21 @@ document.addEventListener('DOMContentLoaded', () => {
         let friendKills = 0;
         let enemyKills = 0;
         
-        // --- START: CORRECTED KILL COUNTING LOGIC ---
         data.forEach(event => {
             const isMonsterKill = event.killers.includes('Monstro/Ambiente');
             
             if (event.team === 'Amigos') { // A friend died
                 friendDeaths++;
-                // If it wasn't a monster, it's a kill for the enemy team.
                 if (!isMonsterKill) {
                     enemyKills++;
                 }
             } else if (event.team === 'Inimigos') { // An enemy died
                 enemyDeaths++;
-                // If it wasn't a monster, it's a kill for the friend team.
                 if (!isMonsterKill) {
                     friendKills++;
                 }
             }
         });
-        // --- END: CORRECTED KILL COUNTING LOGIC ---
 
         document.getElementById('friend-deaths').textContent = friendDeaths;
         document.getElementById('enemy-deaths').textContent = enemyDeaths;
@@ -710,7 +748,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const reasonEl = document.getElementById('battle-winner-reason');
         const resultCard = document.getElementById('battle-result-card');
         
-        // Handle cases with zero deaths to avoid division by zero and correctly determine winner
         if (friendDeaths === 0 && enemyDeaths > 0) {
             winnerEl.textContent = "Amigos Venceram";
             winnerEl.className = "value friend";
@@ -722,23 +759,18 @@ document.addEventListener('DOMContentLoaded', () => {
             resultCard.style.borderColor = "var(--enemy-color)";
             reasonEl.textContent = `K/D Perfeito com ${enemyKills} abates e 0 mortes.`;
         } else if (friendDeaths === 0 && enemyDeaths === 0) {
-            if (friendKills > enemyKills) {
-                winnerEl.textContent = "Amigos Venceram";
-                winnerEl.className = "value friend";
-                resultCard.style.borderColor = "var(--friend-color)";
-                reasonEl.textContent = `Venceram por ${friendKills} a ${enemyKills} abates (ninguém morreu).`;
-            } else if (enemyKills > friendKills) {
-                winnerEl.textContent = "Inimigos Venceram";
-                winnerEl.className = "value enemy";
-                resultCard.style.borderColor = "var(--enemy-color)";
-                reasonEl.textContent = `Venceram por ${enemyKills} a ${friendKills} abates (ninguém morreu).`;
-            } else {
-                winnerEl.textContent = "Empate";
+            if (data.length > 0) { // Check if there were any kills at all
+                 winnerEl.textContent = "Empate";
                 winnerEl.className = "value";
                 resultCard.style.borderColor = "var(--border-color)";
-                reasonEl.textContent = `Batalha sem mortes e com o mesmo número de abates.`;
+                reasonEl.textContent = `Batalha sem mortes de jogadores.`;
+            } else {
+                 winnerEl.textContent = "-";
+                winnerEl.className = "value";
+                resultCard.style.borderColor = "var(--border-color)";
+                reasonEl.textContent = `Aguardando dados...`;
             }
-        } else { // Standard comparison if both teams have deaths
+        } else { 
             if (parseFloat(friendKD) > parseFloat(enemyKD)) {
                 winnerEl.textContent = "Amigos Venceram";
                 winnerEl.className = "value friend";
@@ -759,7 +791,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         // First Victim
-        const firstDeath = sortedData[0];
+        const firstDeath = data[0]; // Uses 'data' which is now sorted
         if (firstDeath) {
             const firstVictim = firstDeath.victim;
             const firstVictimClass = getPlayerClass(firstVictim);
@@ -775,7 +807,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentStreakTeam = null;
         let maxStreakTeam = null;
 
-        sortedData.forEach(event => {
+        data.forEach(event => { // Uses 'data' which is now sorted
             if (event.killers.includes('Monstro/Ambiente')) {
                 currentStreak = 0;
                 currentStreakTeam = null;
@@ -830,7 +862,9 @@ document.addEventListener('DOMContentLoaded', () => {
         topLevelDeathsBody.innerHTML = '';
         sortedLevelDeaths.forEach(death => {
             const row = topLevelDeathsBody.insertRow();
-            const teamClass = death.team === 'Amigos' ? 'friend' : 'enemy';
+            let teamClass = '';
+            if (death.team === 'Amigos') teamClass = 'friend';
+            else if (death.team === 'Inimigos') teamClass = 'enemy';
             row.innerHTML = `<td class="${teamClass}">${death.victim}</td><td>${death.level}</td>`;
         });
     }
@@ -869,7 +903,9 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = '';
         data.forEach(([name, details]) => {
             const row = tableBody.insertRow();
-            const teamClass = details.team === 'Amigos' ? 'friend' : 'enemy';
+            let teamClass = '';
+            if (details.team === 'Amigos') teamClass = 'friend';
+            else if (details.team === 'Inimigos') teamClass = 'enemy';
             row.innerHTML = `<td class="${teamClass}">${name}</td><td>${details.count}</td>`;
         });
     }
@@ -894,9 +930,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `<span class="${killerClass}">${k}</span>`;
             }).join(', ');
             
+            // Formats the ISO date to a readable format (dd/MM/yyyy HH:mm:ss)
+            const displayDate = new Date(event.timestamp).toLocaleString('pt-BR', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            }).replace(',', '');
+
             row.innerHTML = `
                 <td><span class="delete-btn" data-index="${index}">🗑️</span></td>
-                <td>${event.timestamp}</td>
+                <td>${displayDate}</td>
                 <td class="${victimClass}">${event.victim}</td>
                 <td class="level">${event.level}</td>
                 <td>${killersHtml}</td>
@@ -915,13 +958,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('battle-flow-container');
         container.innerHTML = '';
 
-        const sortedData = [...data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-        sortedData.forEach(event => {
+        // Data is already pre-sorted.
+        data.forEach(event => {
             const entry = document.createElement('div');
-            const victimClass = event.team === 'Amigos' ? 'friend' : 'enemy';
-            const entryClass = event.team === 'Amigos' ? 'friend-death' : 'enemy-death';
+            
+            let victimClass = '';
+            if (event.team === 'Amigos') victimClass = 'friend';
+            else if (event.team === 'Inimigos') victimClass = 'enemy';
+            
+            let entryClass = '';
+            if (event.team === 'Amigos') entryClass = 'friend-death';
+            else if (event.team === 'Inimigos') entryClass = 'enemy-death';
+            
             entry.className = `flow-entry ${entryClass}`;
+
 
             const killersHtml = event.killers.map(k => {
                 const killerClass = getPlayerClass(k);
@@ -979,8 +1029,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     x: {
                         type: 'time',
                         time: {
-                            unit: 'hour',
-                            tooltipFormat: 'dd/MM/yyyy HH:mm'
+                            unit: 'minute', // Adjusted for better visualization
+                            tooltipFormat: 'dd/MM/yyyy HH:mm:ss'
                         },
                         title: { display: true, text: 'Data', color: 'white' },
                         ticks: { color: 'white' }
