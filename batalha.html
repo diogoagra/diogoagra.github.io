@@ -629,6 +629,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (playerTeamMap[playerName]) {
             return playerTeamMap[playerName] === 'Amigos' ? 'friend' : 'enemy';
         }
+        // Fallback for players who only get kills and never die.
+        // We can't know their team for sure, so we treat them as neutral for coloring.
+        // The kill counting logic below will handle the points correctly.
         if (playerName.toLowerCase().includes('retro manda')) {
             return 'friend';
         }
@@ -663,18 +666,27 @@ document.addEventListener('DOMContentLoaded', () => {
         let enemyDeaths = 0;
         let friendKills = 0;
         let enemyKills = 0;
-
+        
+        // --- START: CORRECTED KILL COUNTING LOGIC ---
         data.forEach(event => {
-            if (event.team === 'Amigos') {
+            const isMonsterKill = event.killers.includes('Monstro/Ambiente');
+            
+            if (event.team === 'Amigos') { // A friend died
                 friendDeaths++;
-                const hasEnemyKiller = event.killers.some(k => getPlayerClass(k) !== 'friend' && k !== 'Monstro/Ambiente');
-                if(hasEnemyKiller) enemyKills++;
-            } else if (event.team === 'Inimigos') {
+                // If it wasn't a monster, it's a kill for the enemy team.
+                if (!isMonsterKill) {
+                    enemyKills++;
+                }
+            } else if (event.team === 'Inimigos') { // An enemy died
                 enemyDeaths++;
-                const hasFriendKiller = event.killers.some(k => getPlayerClass(k) === 'friend');
-                if(hasFriendKiller) friendKills++;
+                // If it wasn't a monster, it's a kill for the friend team.
+                if (!isMonsterKill) {
+                    friendKills++;
+                }
             }
         });
+        // --- END: CORRECTED KILL COUNTING LOGIC ---
+
         document.getElementById('friend-deaths').textContent = friendDeaths;
         document.getElementById('enemy-deaths').textContent = enemyDeaths;
         
@@ -697,22 +709,54 @@ document.addEventListener('DOMContentLoaded', () => {
         const winnerEl = document.getElementById('battle-winner');
         const reasonEl = document.getElementById('battle-winner-reason');
         const resultCard = document.getElementById('battle-result-card');
-        if (parseFloat(friendKD) > parseFloat(enemyKD)) {
+        
+        // Handle cases with zero deaths to avoid division by zero and correctly determine winner
+        if (friendDeaths === 0 && enemyDeaths > 0) {
             winnerEl.textContent = "Amigos Venceram";
             winnerEl.className = "value friend";
             resultCard.style.borderColor = "var(--friend-color)";
-            reasonEl.textContent = `Com um K/D Ratio de ${friendKD} contra ${enemyKD}`;
-        } else if (parseFloat(enemyKD) > parseFloat(friendKD)) {
+            reasonEl.textContent = `K/D Perfeito com ${friendKills} abates e 0 mortes.`;
+        } else if (enemyDeaths === 0 && friendDeaths > 0) {
             winnerEl.textContent = "Inimigos Venceram";
             winnerEl.className = "value enemy";
             resultCard.style.borderColor = "var(--enemy-color)";
-            reasonEl.textContent = `Com um K/D Ratio de ${enemyKD} contra ${friendKD}`;
-        } else {
-            winnerEl.textContent = "Empate";
-            winnerEl.className = "value";
-            resultCard.style.borderColor = "var(--border-color)";
-            reasonEl.textContent = `Ambos os times tiveram um K/D Ratio de ${friendKD}`;
+            reasonEl.textContent = `K/D Perfeito com ${enemyKills} abates e 0 mortes.`;
+        } else if (friendDeaths === 0 && enemyDeaths === 0) {
+            if (friendKills > enemyKills) {
+                winnerEl.textContent = "Amigos Venceram";
+                winnerEl.className = "value friend";
+                resultCard.style.borderColor = "var(--friend-color)";
+                reasonEl.textContent = `Venceram por ${friendKills} a ${enemyKills} abates (ninguém morreu).`;
+            } else if (enemyKills > friendKills) {
+                winnerEl.textContent = "Inimigos Venceram";
+                winnerEl.className = "value enemy";
+                resultCard.style.borderColor = "var(--enemy-color)";
+                reasonEl.textContent = `Venceram por ${enemyKills} a ${friendKills} abates (ninguém morreu).`;
+            } else {
+                winnerEl.textContent = "Empate";
+                winnerEl.className = "value";
+                resultCard.style.borderColor = "var(--border-color)";
+                reasonEl.textContent = `Batalha sem mortes e com o mesmo número de abates.`;
+            }
+        } else { // Standard comparison if both teams have deaths
+            if (parseFloat(friendKD) > parseFloat(enemyKD)) {
+                winnerEl.textContent = "Amigos Venceram";
+                winnerEl.className = "value friend";
+                resultCard.style.borderColor = "var(--friend-color)";
+                reasonEl.textContent = `Com um K/D Ratio de ${friendKD} contra ${enemyKD}`;
+            } else if (parseFloat(enemyKD) > parseFloat(friendKD)) {
+                winnerEl.textContent = "Inimigos Venceram";
+                winnerEl.className = "value enemy";
+                resultCard.style.borderColor = "var(--enemy-color)";
+                reasonEl.textContent = `Com um K/D Ratio de ${enemyKD} contra ${friendKD}`;
+            } else {
+                winnerEl.textContent = "Empate";
+                winnerEl.className = "value";
+                resultCard.style.borderColor = "var(--border-color)";
+                reasonEl.textContent = `Ambos os times tiveram um K/D Ratio de ${friendKD}`;
+            }
         }
+
 
         // First Victim
         const firstDeath = sortedData[0];
