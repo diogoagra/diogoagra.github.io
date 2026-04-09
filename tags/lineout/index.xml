@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Posts on diogoagra.dev</title>
-    <link>https://diogoagra.dev/posts/</link>
-    <description>Recent content in Posts on diogoagra.dev</description>
+    <title>Lineout on diogoagra.dev</title>
+    <link>https://diogoagra.dev/tags/lineout/</link>
+    <description>Recent content in Lineout on diogoagra.dev</description>
     <generator>Hugo</generator>
     <language>en</language>
     <lastBuildDate>Thu, 09 Apr 2026 10:00:00 -0300</lastBuildDate>
-    <atom:link href="https://diogoagra.dev/posts/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://diogoagra.dev/tags/lineout/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Line Out: Política de Privacidade</title>
       <link>https://diogoagra.dev/posts/lineout-privacy-policy/</link>
@@ -21,27 +21,6 @@
       <pubDate>Thu, 09 Apr 2026 10:00:00 -0300</pubDate>
       <guid>https://diogoagra.dev/posts/lineout-terms-of-use/</guid>
       <description>&lt;h2 id=&#34;termos-de-uso---line-out&#34;&gt;Termos de Uso - Line Out&lt;/h2&gt;&#xA;&lt;h2 id=&#34;1-aceitação-dos-termos&#34;&gt;1. Aceitação dos Termos&lt;/h2&gt;&#xA;&lt;p&gt;Ao baixar e utilizar o jogo &lt;strong&gt;Line Out&lt;/strong&gt;, você concorda com estes Termos de Uso. Se você não concordar com algum termo, por favor, não utilize o jogo.&lt;/p&gt;&#xA;&lt;h2 id=&#34;2-licença-de-uso&#34;&gt;2. Licença de Uso&lt;/h2&gt;&#xA;&lt;p&gt;É concedida a você uma licença limitada, não exclusiva e não transferível para utilizar o Line Out para uso pessoal e não comercial. Você não deve:&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;Tentar descompilar ou fazer engenharia reversa do software.&lt;/li&gt;&#xA;&lt;li&gt;Remover quaisquer avisos de direitos autorais ou propriedade.&lt;/li&gt;&#xA;&lt;li&gt;Distribuir o jogo em plataformas não autorizadas pelo Desenvolvedor.&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;h2 id=&#34;3-isenção-de-responsabilidade&#34;&gt;3. Isenção de Responsabilidade&lt;/h2&gt;&#xA;&lt;p&gt;O Line Out é fornecido &amp;ldquo;no estado em que se encontra&amp;rdquo; (AS IS). O Desenvolvedor não oferece garantias de que o jogo estará livre de erros ou interrupções. O uso do jogo é por sua conta e risco.&lt;/p&gt;</description>
-    </item>
-    <item>
-      <title>Política de Privacidade Meu Plantão</title>
-      <link>https://diogoagra.dev/posts/meu-plantao-privacy-policy/</link>
-      <pubDate>Wed, 12 Jun 2024 20:43:29 -0300</pubDate>
-      <guid>https://diogoagra.dev/posts/meu-plantao-privacy-policy/</guid>
-      <description>&lt;h2 id=&#34;política-de-privacidade---meu-plantão&#34;&gt;Política de Privacidade - Meu Plantão&lt;/h2&gt;&#xA;&lt;p&gt;Última Atualização: 2024-06-13&lt;/p&gt;&#xA;&lt;p&gt;Bem-vindo ao Meu Plantão! Esta Política de Privacidade descreve como coletamos, usamos e protegemos suas informações ao usar nosso aplicativo móvel. Ao utilizar o Meu Plantão, você concorda com os termos aqui descritos.&lt;/p&gt;&#xA;&lt;h2 id=&#34;1-informações-coletadas&#34;&gt;1. Informações Coletadas&lt;/h2&gt;&#xA;&lt;p&gt;O Meu Plantão coleta apenas as seguintes informações pessoais dos usuários:&lt;/p&gt;&#xA;&lt;p&gt;E-mail: Utilizado para login e comunicação com o usuário.&#xA;Senha: Utilizada para acesso seguro à sua conta.&#xA;Além disso, os usuários podem registrar dentro da plataforma as seguintes informações:&lt;/p&gt;</description>
-    </item>
-    <item>
-      <title>Política de Privacidade</title>
-      <link>https://diogoagra.dev/posts/privacy-policy/</link>
-      <pubDate>Tue, 04 Jun 2024 20:43:29 -0300</pubDate>
-      <guid>https://diogoagra.dev/posts/privacy-policy/</guid>
-      <description>&lt;h2 id=&#34;política-de-privacidade&#34;&gt;Política de Privacidade&lt;/h2&gt;&#xA;&lt;h2 id=&#34;1-introdução&#34;&gt;1. Introdução&lt;/h2&gt;&#xA;&lt;p&gt;Este aplicativo (&amp;ldquo;Tracking&amp;rdquo;) é fornecido por Diogo Agra (&amp;ldquo;Desenvolvedor&amp;rdquo;). Esta Política de Privacidade (&amp;ldquo;Política&amp;rdquo;) descreve como o Desenvolvedor coleta e usa as informações do usuário em conexão com o uso do Aplicativo.&lt;/p&gt;&#xA;&lt;h2 id=&#34;2-coleta-de-informações&#34;&gt;2. Coleta de Informações&lt;/h2&gt;&#xA;&lt;p&gt;O Aplicativo não coleta nenhuma informação pessoal ou confidencial do usuário. O Aplicativo não rastreia ou monitora a atividade do usuário no Aplicativo ou em outros sites ou serviços. O Aplicativo não armazena nenhum dado do usuário em seus servidores.&lt;/p&gt;</description>
-    </item>
-    <item>
-      <title>Hello World!</title>
-      <link>https://diogoagra.dev/posts/hello-world/</link>
-      <pubDate>Wed, 09 Aug 2023 21:54:32 -0300</pubDate>
-      <guid>https://diogoagra.dev/posts/hello-world/</guid>
-      <description>&lt;p&gt;Hello world!&lt;/p&gt;</description>
     </item>
   </channel>
 </rss>
