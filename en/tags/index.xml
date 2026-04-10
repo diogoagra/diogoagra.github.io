@@ -2,38 +2,38 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Tags on diogoagra.dev</title>
-    <link>https://diogoagra.dev/tags/</link>
+    <link>https://diogoagra.dev/en/tags/</link>
     <description>Recent content in Tags on diogoagra.dev</description>
     <generator>Hugo</generator>
-    <language>pt-br</language>
+    <language>en</language>
     <lastBuildDate>Thu, 09 Apr 2026 10:00:00 -0300</lastBuildDate>
-    <atom:link href="https://diogoagra.dev/tags/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://diogoagra.dev/en/tags/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Jogos</title>
-      <link>https://diogoagra.dev/tags/jogos/</link>
+      <title>Games</title>
+      <link>https://diogoagra.dev/en/tags/games/</link>
       <pubDate>Thu, 09 Apr 2026 10:00:00 -0300</pubDate>
-      <guid>https://diogoagra.dev/tags/jogos/</guid>
+      <guid>https://diogoagra.dev/en/tags/games/</guid>
       <description></description>
     </item>
     <item>
       <title>Lineout</title>
-      <link>https://diogoagra.dev/tags/lineout/</link>
+      <link>https://diogoagra.dev/en/tags/lineout/</link>
       <pubDate>Thu, 09 Apr 2026 10:00:00 -0300</pubDate>
-      <guid>https://diogoagra.dev/tags/lineout/</guid>
+      <guid>https://diogoagra.dev/en/tags/lineout/</guid>
       <description></description>
     </item>
     <item>
-      <title>Privacidade</title>
-      <link>https://diogoagra.dev/tags/privacidade/</link>
+      <title>Privacy</title>
+      <link>https://diogoagra.dev/en/tags/privacy/</link>
       <pubDate>Thu, 09 Apr 2026 10:00:00 -0300</pubDate>
-      <guid>https://diogoagra.dev/tags/privacidade/</guid>
+      <guid>https://diogoagra.dev/en/tags/privacy/</guid>
       <description></description>
     </item>
     <item>
-      <title>Termos</title>
-      <link>https://diogoagra.dev/tags/termos/</link>
+      <title>Terms</title>
+      <link>https://diogoagra.dev/en/tags/terms/</link>
       <pubDate>Thu, 09 Apr 2026 10:00:00 -0300</pubDate>
-      <guid>https://diogoagra.dev/tags/termos/</guid>
+      <guid>https://diogoagra.dev/en/tags/terms/</guid>
       <description></description>
     </item>
   </channel>

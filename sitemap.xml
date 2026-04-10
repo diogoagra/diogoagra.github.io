@@ -1,46 +1,18 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-  xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  <url>
-    <loc>https://diogoagra.dev/</loc>
-    <lastmod>2026-04-09T10:00:00-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/tags/jogos/</loc>
-    <lastmod>2026-04-09T10:00:00-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/posts/lineout-privacy-policy/</loc>
-    <lastmod>2026-04-09T10:00:00-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/posts/lineout-terms-of-use/</loc>
-    <lastmod>2026-04-09T10:00:00-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/tags/lineout/</loc>
-    <lastmod>2026-04-09T10:00:00-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/posts/</loc>
-    <lastmod>2026-04-09T10:00:00-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/tags/privacidade/</loc>
-    <lastmod>2026-04-09T10:00:00-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/tags/</loc>
-    <lastmod>2026-04-09T10:00:00-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/tags/termos/</loc>
-    <lastmod>2026-04-09T10:00:00-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/tags/pol%C3%ADtica/</loc>
-    <lastmod>2024-06-12T20:43:29-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/posts/meu-plantao-privacy-policy/</loc>
-    <lastmod>2024-06-12T20:43:29-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/posts/privacy-policy/</loc>
-    <lastmod>2024-06-04T20:43:29-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/posts/hello-world/</loc>
-    <lastmod>2023-08-09T21:54:32-03:00</lastmod>
-  </url><url>
-    <loc>https://diogoagra.dev/categories/</loc>
-  </url>
-</urlset>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <sitemap>
+    <loc>https://diogoagra.dev/pt/sitemap.xml</loc>
+    
+      <lastmod>2026-04-09T10:00:00-03:00</lastmod>
+    
+  </sitemap>
+  
+  <sitemap>
+    <loc>https://diogoagra.dev/en/sitemap.xml</loc>
+    
+      <lastmod>2026-04-09T10:00:00-03:00</lastmod>
+    
+  </sitemap>
+  
+</sitemapindex>
